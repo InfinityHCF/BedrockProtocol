@@ -2,6 +2,7 @@
     "name": "nethergamesmc/bedrock-protocol",
     "description": "An implementation of the Minecraft: Bedrock Edition protocol in PHP",
     "type": "library",
+    "minimum-stability": "dev",
     "require": {
         "php": "^8.0",
         "ext-json": "*",
