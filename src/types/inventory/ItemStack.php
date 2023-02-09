@@ -40,6 +40,10 @@ final class ItemStack implements \JsonSerializable{
 		return new self(0, 0, 0, 0, null, [], [], null);
 	}
 
+	public function isNull() : bool{
+		return $this->id === 0;
+	}
+
 	public function getId() : int{
 		return $this->id;
 	}
@@ -77,10 +81,13 @@ final class ItemStack implements \JsonSerializable{
 	}
 
 	public function equals(ItemStack $itemStack) : bool{
+		return $this->equalsWithoutCount($itemStack) && $this->count === $itemStack->count;
+	}
+
+	public function equalsWithoutCount(ItemStack $itemStack) : bool{
 		return
 			$this->id === $itemStack->id &&
 			$this->meta === $itemStack->meta &&
-			$this->count === $itemStack->count &&
 			$this->blockRuntimeId === $itemStack->blockRuntimeId &&
 			$this->canPlaceOn === $itemStack->canPlaceOn &&
 			$this->canDestroy === $itemStack->canDestroy &&

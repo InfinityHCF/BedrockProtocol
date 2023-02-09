@@ -63,6 +63,7 @@ final class LevelSettings{
 	public bool $onlySpawnV1Villagers = false;
 	public bool $disablePersona = false;
 	public bool $disableCustomSkins = false;
+	public bool $muteEmoteAnnouncements = false;
 	public string $vanillaVersion = ProtocolInfo::MINECRAFT_VERSION_NETWORK;
 	public int $limitedWorldWidth = 0;
 	public int $limitedWorldLength = 0;
@@ -140,6 +141,9 @@ final class LevelSettings{
 		if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_19_20){
 			$this->disablePersona = $in->getBool();
 			$this->disableCustomSkins = $in->getBool();
+			if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_19_60){
+				$this->muteEmoteAnnouncements = $in->getBool();
+			}
 		}
 		if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_13_0){
 			$this->vanillaVersion = $in->getString();
@@ -211,6 +215,9 @@ final class LevelSettings{
 		if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_19_20){
 			$out->putBool($this->disablePersona);
 			$out->putBool($this->disableCustomSkins);
+			if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_19_60){
+				$out->putBool($this->muteEmoteAnnouncements);
+			}
 		}
 		if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_13_0){
 			$out->putString($this->vanillaVersion);

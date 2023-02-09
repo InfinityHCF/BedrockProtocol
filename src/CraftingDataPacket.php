@@ -24,6 +24,7 @@ use pocketmine\network\mcpe\protocol\types\recipe\PotionTypeRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeWithTypeId;
 use pocketmine\network\mcpe\protocol\types\recipe\ShapedRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\ShapelessRecipe;
+use pocketmine\network\mcpe\protocol\types\recipe\SmithingTransformRecipe;
 use function count;
 
 class CraftingDataPacket extends DataPacket implements ClientboundPacket{
@@ -37,6 +38,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	public const ENTRY_SHULKER_BOX = 5;
 	public const ENTRY_SHAPELESS_CHEMISTRY = 6;
 	public const ENTRY_SHAPED_CHEMISTRY = 7;
+	public const ENTRY_SMITHING_TRANSFORM = 8;
 
 	/** @var RecipeWithTypeId[] */
 	public array $recipesWithTypeIds = [];
@@ -75,29 +77,32 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 				self::ENTRY_SHAPED, self::ENTRY_SHAPED_CHEMISTRY => ShapedRecipe::decode($recipeType, $in),
 				self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => FurnaceRecipe::decode($recipeType, $in),
 				self::ENTRY_MULTI => MultiRecipe::decode($recipeType, $in),
+				self::ENTRY_SMITHING_TRANSFORM => SmithingTransformRecipe::decode($recipeType, $in),
 				default => throw new PacketDecodeException("Unhandled recipe type $recipeType!"),
 			};
 		}
-		for($i = 0, $count = $in->getUnsignedVarInt(); $i < $count; ++$i){
-			$inputId = $in->getVarInt();
-			if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$inputMeta = $in->getVarInt();
+		if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_13_0){
+			for($i = 0, $count = $in->getUnsignedVarInt(); $i < $count; ++$i){
+				$inputId = $in->getVarInt();
+				if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$inputMeta = $in->getVarInt();
+				}
+				$ingredientId = $in->getVarInt();
+				if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$ingredientMeta = $in->getVarInt();
+				}
+				$outputId = $in->getVarInt();
+				if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$outputMeta = $in->getVarInt();
+				}
+				$this->potionTypeRecipes[] = new PotionTypeRecipe($inputId, $inputMeta ?? 0, $ingredientId, $ingredientMeta ?? 0, $outputId, $outputMeta ?? 0);
 			}
-			$ingredientId = $in->getVarInt();
-			if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$ingredientMeta = $in->getVarInt();
+			for($i = 0, $count = $in->getUnsignedVarInt(); $i < $count; ++$i){
+				$input = $in->getVarInt();
+				$ingredient = $in->getVarInt();
+				$output = $in->getVarInt();
+				$this->potionContainerRecipes[] = new PotionContainerChangeRecipe($input, $ingredient, $output);
 			}
-			$outputId = $in->getVarInt();
-			if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$outputMeta = $in->getVarInt();
-			}
-			$this->potionTypeRecipes[] = new PotionTypeRecipe($inputId, $inputMeta ?? 0, $ingredientId, $ingredientMeta ?? 0, $outputId, $outputMeta ?? 0);
-		}
-		for($i = 0, $count = $in->getUnsignedVarInt(); $i < $count; ++$i){
-			$input = $in->getVarInt();
-			$ingredient = $in->getVarInt();
-			$output = $in->getVarInt();
-			$this->potionContainerRecipes[] = new PotionContainerChangeRecipe($input, $ingredient, $output);
 		}
 		if($in->getProtocolId() >= ProtocolInfo::PROTOCOL_1_17_30){
 			for($i = 0, $count = $in->getUnsignedVarInt(); $i < $count; ++$i){
@@ -121,26 +126,28 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 			$out->putVarInt($d->getTypeId());
 			$d->encode($out);
 		}
-		$out->putUnsignedVarInt(count($this->potionTypeRecipes));
-		foreach($this->potionTypeRecipes as $recipe){
-			$out->putVarInt($recipe->getInputItemId());
-			if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$out->putVarInt($recipe->getInputItemMeta());
+		if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_13_0){
+			$out->putUnsignedVarInt(count($this->potionTypeRecipes));
+			foreach($this->potionTypeRecipes as $recipe){
+				$out->putVarInt($recipe->getInputItemId());
+				if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$out->putVarInt($recipe->getInputItemMeta());
+				}
+				$out->putVarInt($recipe->getIngredientItemId());
+				if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$out->putVarInt($recipe->getIngredientItemMeta());
+				}
+				$out->putVarInt($recipe->getOutputItemId());
+				if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
+					$out->putVarInt($recipe->getOutputItemMeta());
+				}
 			}
-			$out->putVarInt($recipe->getIngredientItemId());
-			if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$out->putVarInt($recipe->getIngredientItemMeta());
+			$out->putUnsignedVarInt(count($this->potionContainerRecipes));
+			foreach($this->potionContainerRecipes as $recipe){
+				$out->putVarInt($recipe->getInputItemId());
+				$out->putVarInt($recipe->getIngredientItemId());
+				$out->putVarInt($recipe->getOutputItemId());
 			}
-			$out->putVarInt($recipe->getOutputItemId());
-			if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_16_0){
-				$out->putVarInt($recipe->getOutputItemMeta());
-			}
-		}
-		$out->putUnsignedVarInt(count($this->potionContainerRecipes));
-		foreach($this->potionContainerRecipes as $recipe){
-			$out->putVarInt($recipe->getInputItemId());
-			$out->putVarInt($recipe->getIngredientItemId());
-			$out->putVarInt($recipe->getOutputItemId());
 		}
 		if($out->getProtocolId() >= ProtocolInfo::PROTOCOL_1_17_30){
 			$out->putUnsignedVarInt(count($this->materialReducerRecipes));
